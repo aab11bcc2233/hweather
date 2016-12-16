@@ -2,6 +2,7 @@ package co.codehe.hweather;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -12,6 +13,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -82,6 +84,21 @@ public class ChooseAreaFragment extends Fragment {
 
         adapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_list_item_1, dataList);
         listView.setAdapter(adapter);
+
+        if (getActivity() instanceof WeatherActivity && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            WeatherActivity activity = (WeatherActivity) getActivity();
+            int statusBarHeight = activity.getStatusBarHeight();
+            int navBarHeight = activity.getNavigationBarHeight();
+
+            RelativeLayout title = (RelativeLayout) view.findViewById(R.id.title);
+            ViewGroup.LayoutParams lp = title.getLayoutParams();
+            lp.height = activity.getActionBarSize() + statusBarHeight;
+
+            title.setPadding(0, statusBarHeight, 0, 0);
+            listView.setPadding(0, 0, 0, navBarHeight);
+
+//            view.setBackgroundColor(Color.TRANSPARENT);
+        }
         return view;
     }
 
@@ -99,10 +116,17 @@ public class ChooseAreaFragment extends Fragment {
                     queryCounties();
                 } else if (currentLevel == LEVEL_COUNTY) {
                     String weatherId = countyList.get(position).getWeatherId();
-                    Intent intent = new Intent(getActivity(), WeatherActivity.class);
-                    intent.putExtra("weather_id", weatherId);
-                    startActivity(intent);
-                    getActivity().finish();
+                    if (getActivity() instanceof MainActivity) {
+                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                        intent.putExtra("weather_id", weatherId);
+                        startActivity(intent);
+                        getActivity().finish();
+                    } else {
+                        WeatherActivity activity = (WeatherActivity) getActivity();
+                        activity.drawerLayout.closeDrawers();
+                        activity.swipeRefresh.setRefreshing(true);
+                        activity.requestWeather(weatherId);
+                    }
                 }
             }
         });
@@ -159,7 +183,7 @@ public class ChooseAreaFragment extends Fragment {
         } else {
             int provinceCode = selectedProvince.getProvinceCode();
             String address = "http://guolin.tech/api/china/" + provinceCode;
-            queryFromServer(address, "city");
+            queryFromServer(address, "home");
         }
     }
 
@@ -206,7 +230,7 @@ public class ChooseAreaFragment extends Fragment {
                 boolean result = false;
                 if ("province".equals(type)) {
                     result = Utility.handleProvinceResponse(responseText);
-                } else if ("city".equals(type)) {
+                } else if ("home".equals(type)) {
                     result = Utility.handleCityResponse(responseText, selectedProvince.getId());
                 } else if ("county".equals(type)) {
                     result = Utility.handleCountyResponse(responseText, selectedCity.getId());
@@ -219,7 +243,7 @@ public class ChooseAreaFragment extends Fragment {
                             closeProgressDialog();
                             if ("province".equals(type)) {
                                 queryProvinces();
-                            } else if ("city".equals(type)) {
+                            } else if ("home".equals(type)) {
                                 queryCities();
                             } else if ("county".equals(type)) {
                                 queryCounties();
