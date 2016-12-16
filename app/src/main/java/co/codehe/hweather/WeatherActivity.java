@@ -1,5 +1,6 @@
 package co.codehe.hweather;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.Color;
@@ -32,6 +33,7 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 import co.codehe.hweather.gson.Forecast;
 import co.codehe.hweather.gson.Weather;
+import co.codehe.hweather.service.AutoUpdateService;
 import co.codehe.hweather.util.HttpUtil;
 import co.codehe.hweather.util.Utility;
 import okhttp3.Call;
@@ -72,6 +74,7 @@ public class WeatherActivity extends AppCompatActivity {
 //    Button navButton;
     @BindView(R.id.drawer_layout)
     DrawerLayout drawerLayout;
+    private String weatherId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,7 +107,6 @@ public class WeatherActivity extends AppCompatActivity {
         }
 
         String weatherString = prefs.getString("weather", null);
-        final String weatherId;
         if (weatherString != null) {
             Weather weather = Utility.handleWeatherResponse(weatherString);
             weatherId = weather.basic.weatherId;
@@ -128,8 +130,14 @@ public class WeatherActivity extends AppCompatActivity {
         drawerLayout.openDrawer(GravityCompat.START);
     }
 
-    public void requestWeather(final String weatherId) {
-        String weatherUrl = "http://guolin.tech/api/weather?cityid=" + weatherId + "&key=0e9ea4c322b342d882ccef7f041cc106";
+    @OnClick(R.id.title_city)
+    public void cityNameClick(View view) {
+        drawerLayout.openDrawer(GravityCompat.START);
+    }
+
+    public void requestWeather(final String wId) {
+
+        String weatherUrl = "http://guolin.tech/api/weather?cityid=" + wId + "&key=0e9ea4c322b342d882ccef7f041cc106";
 
         HttpUtil.sendOkHttpRequest(weatherUrl, new Callback() {
             @Override
@@ -154,6 +162,11 @@ public class WeatherActivity extends AppCompatActivity {
                             SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
                             editor.putString("weather", responseText);
                             editor.apply();
+
+                            if (!weatherId.equals(wId)) {
+                                weatherId = wId;
+                            }
+
                             showWeatherInfo(weather);
                         } else {
                             Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
@@ -169,6 +182,9 @@ public class WeatherActivity extends AppCompatActivity {
     }
 
     private void showWeatherInfo(Weather weather) {
+        Intent intent = new Intent(this, AutoUpdateService.class);
+        startService(intent);
+
         String cityName = weather.basic.cityName;
         String updateTime = weather.basic.update.updateTime.split(" ")[1];
         String degree = weather.now.temperature + "℃";
