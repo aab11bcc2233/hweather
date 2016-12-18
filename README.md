@@ -1,7 +1,6 @@
 # hweather
 
 # LICENSE
----
 
 ```
 Copyright (C) 2015 ogaclejapan
